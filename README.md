@@ -4,7 +4,7 @@ A small browser lesson on **stack buffer overflow** for COMS 352.
 
 Open `index.html` and type a name. The page draws a simplified function frame and shows `strcpy` walking from a local buffer toward higher addresses, into the saved frame pointer and the return address when the name is too long.
 
-This is a picture of memory for learning. It is not an exploit, a payload, or a program you can attack.
+This is a picture of memory for learning
 
 ## Run it
 
@@ -45,6 +45,3 @@ No shellcode, no chosen jump target, and no steps for compromising a program. Ov
 | `reflection.md` | One-page note on building the lesson and what it clarified |
 | `README.md` | This file |
 
-## Privacy
-
-This project has no API keys, passwords, or personal data. If the repository is made private, add the instructor (`@atamrawi`) and the TA (`@adajani`) as collaborators before the deadline.
