@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rose Frame · a stack buffer lesson</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,620&family=Nunito:wght@420;620;750&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #4c2233;
+      --muted: #8d5b6e;
+      --paper: #fff7fb;
+      --card: rgba(255, 252, 253, 0.9);
+      --line: #f3c3d6;
+      --blush: #ffe3ef;
+      --petal: #f7b7d0;
+      --rose: #d4537e;
+      --berry: #9c3458;
+      --cream: #fff3df;
+      --gold: #e8c7a4;
+      --deep: #6e243c;
+      --shadow: 0 18px 50px rgba(156, 52, 88, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Nunito", "Gill Sans", "Trebuchet MS", sans-serif;
+      background:
+        radial-gradient(circle at 8% 0%, #ffd6e8 0, transparent 34%),
+        radial-gradient(circle at 96% 8%, #ffe8c9 0, transparent 28%),
+        radial-gradient(circle at 80% 100%, #f8d5e6 0, transparent 32%),
+        var(--paper);
+    }
+
+    .wrap {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+
+    header.hero {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .mark {
+      width: 72px;
+      height: 72px;
+      filter: drop-shadow(0 8px 16px rgba(212, 83, 126, 0.25));
+    }
+
+    h1 {
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 620;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      line-height: 0.95;
+      margin: 0;
+      letter-spacing: -0.03em;
+      color: var(--deep);
+    }
+
+    h1 span { color: var(--rose); }
+
+    .lede {
+      margin: 8px 0 0;
+      max-width: 62ch;
+      font-size: 1.05rem;
+      color: var(--muted);
+    }
+
+    .ideas {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0 26px;
+    }
+
+    .idea, .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .idea {
+      padding: 14px 16px 16px;
+    }
+
+    .idea b {
+      display: block;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+    }
+
+    .idea p, .note, .story p, .detail, footer {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card { padding: 18px; }
+
+    h2 {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.45rem;
+      margin: 0 0 12px;
+      color: var(--deep);
+    }
+
+    label.field {
+      display: block;
+      font-weight: 750;
+      font-size: 0.92rem;
+      margin: 12px 0 6px;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+
+    input[type="text"]:focus, select:focus, input[type="range"]:focus {
+      outline: 2px solid var(--rose);
+      outline-offset: 2px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      font-size: 0.92rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--rose);
+    }
+
+    .toggles { display: grid; gap: 8px; margin-top: 14px; }
+
+    .switch {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: #fff6fa;
+      border: 1px solid #f6d5e3;
+      font-weight: 620;
+    }
+
+    .switch small {
+      display: block;
+      font-weight: 420;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(180deg, #e56b93, var(--berry));
+    }
+
+    button.ghost {
+      color: var(--berry);
+      background: #fff;
+      border: 1px solid var(--petal);
+    }
+
+    button:disabled { opacity: 0.55; cursor: default; }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #4c2233;
+      color: #ffe7f0;
+      overflow: auto;
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .status {
+      border-radius: 18px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      background: var(--blush);
+      border: 1px solid var(--line);
+    }
+
+    .status strong { display: block; margin-bottom: 2px; }
+    .status.ok { background: #f3ffe9; border-color: #d5ecba; }
+    .status.warn { background: #fff1d8; border-color: #f0d2a4; }
+    .status.bad { background: #ffe1ea; border-color: #f3b4c8; }
+
+    .stack-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .hint { font-size: 0.88rem; color: var(--muted); text-align: right; }
+
+    .region { margin-top: 10px; }
+
+    .region-title {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 750;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .rows { display: grid; gap: 6px; }
+
+    .byte-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .addr {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .cells {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .cell {
+      min-height: 64px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: var(--blush);
+      padding: 6px 6px 8px;
+      text-align: center;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .cell .hex { display: block; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .cell .glyph { display: block; font-size: 0.78rem; color: var(--muted); }
+    .cell.buffer { background: #ffe4ef; }
+    .cell.canary { background: var(--cream); }
+    .cell.fp { background: #ffd0e2; }
+    .cell.ret { background: #f7b9ce; }
+    .cell.above { background: #fff; border-color: #f3d5e2; }
+    .cell.changed { box-shadow: inset 0 0 0 2px var(--berry); }
+    .cell.current { outline: 2px solid var(--rose); outline-offset: 2px; }
+    .cell.picked { outline: 2px dashed var(--deep); outline-offset: 2px; }
+    .cell.quiet { opacity: 0.72; }
+    .cell:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 5px;
+      display: inline-block;
+    }
+
+    .story { margin-top: 18px; }
+    .story p + p { margin-top: 8px; }
+    .detail { margin-top: 10px; min-height: 1.2em; }
+
+    footer {
+      margin-top: 22px;
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 860px) {
+      .ideas, .workspace, header.hero { grid-template-columns: 1fr; }
+      .hint { text-align: left; }
+      .byte-row { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <svg class="mark" viewBox="0 0 72 72" aria-hidden="true">
+        <circle cx="36" cy="36" r="34" fill="#fff" stroke="#f3c3d6"/>
+        <path d="M36 50c-8-6-16-12-16-22a10 10 0 0 1 18-6 10 10 0 0 1 18 6c0 10-8 16-16 22z" fill="#f7b7d0" stroke="#d4537e"/>
+        <circle cx="36" cy="30" r="4" fill="#fff3df" stroke="#d4537e"/>
+      </svg>
+      <div>
+        <h1>Rose <span>Frame</span></h1>
+        <p class="lede">A gentle picture of a stack buffer overflow. Type a name, and watch an unbounded copy walk from a small buffer toward the saved return address.</p>
+      </div>
+    </header>
+
+    <section class="ideas" aria-label="How to read the frame">
+      <article class="idea">
+        <b>1. The call saves a way back</b>
+        <p>Calling <code>greet</code> stores a return address and the caller’s frame pointer beside the new locals.</p>
+      </article>
+      <article class="idea">
+        <b>2. The buffer sits just below</b>
+        <p>On this teaching frame the stack grows down, so <code>buf[0]</code> is the lowest address in the picture.</p>
+      </article>
+      <article class="idea">
+        <b>3. The copy walks upward</b>
+        <p><code>strcpy</code> writes toward higher addresses and does not stop at the end of the array.</p>
+      </article>
+    </section>
+
+    <div class="workspace">
+      <section class="card">
+        <h2>Try a copy</h2>
+        <label class="field" for="name">Name passed to greet</label>
+        <input id="name" type="text" maxlength="24" value="Rosebud!" autocomplete="off" spellcheck="false">
+
+        <label class="field" for="preset">Examples</label>
+        <select id="preset">
+          <option value="Hi">Hi — short, fits</option>
+          <option value="Rosebud">Rosebud — exact fit, with the NUL</option>
+          <option value="Rosebud!" selected>Rosebud! — the NUL spills</option>
+          <option value="Hello, friend">Hello, friend — spills further</option>
+        </select>
+
+        <div class="row">
+          <label class="field" for="size">Buffer size</label>
+          <span id="size-label">8 bytes</span>
+        </div>
+        <input id="size" type="range" min="4" max="16" step="4" value="8">
+
+        <div class="row">
+          <label class="field" for="progress">Copy progress</label>
+          <span id="progress-label">byte 0</span>
+        </div>
+        <input id="progress" type="range" min="0" max="1" value="1">
+
+        <div class="toggles">
+          <label class="switch">
+            <input id="bounds" type="checkbox">
+            <span>Length check<small>Refuse characters that would not leave room for the NUL.</small></span>
+          </label>
+          <label class="switch">
+            <input id="canary" type="checkbox">
+            <span>Stack canary<small>Place the guard bytes ROSE between the buffer and the saved frame pointer.</small></span>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="step" type="button" class="ghost">Next byte</button>
+          <button id="walk" type="button">Walk the copy</button>
+          <button id="reset" type="button" class="ghost">Reset</button>
+        </div>
+
+        <pre id="code"></pre>
+      </section>
+
+      <section class="card" aria-live="polite">
+        <div class="stack-head">
+          <h2>The frame</h2>
+          <p class="hint">Higher addresses are above.<br>Each row reads left to right, low to high.</p>
+        </div>
+        <div id="status" class="status"></div>
+        <div id="stack"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:#ffe4ef"></i> buffer</span>
+          <span><i class="swatch" style="background:#fff3df"></i> canary</span>
+          <span><i class="swatch" style="background:#ffd0e2"></i> saved frame pointer</span>
+          <span><i class="swatch" style="background:#f7b9ce"></i> return address</span>
+          <span><i class="swatch" style="background:#fff;border:1px solid #f3d5e2"></i> bytes above the frame</span>
+        </div>
+        <p id="detail" class="detail">Click a byte to read its address.</p>
+      </section>
+    </div>
+
+    <section class="card story">
+      <h2>What just happened</h2>
+      <div id="story"></div>
+    </section>
+
+    <footer>
+      Rose Frame is a COMS 352 teaching picture. The addresses are fictional. Nothing on this page is shellcode or an attack tool.
+    </footer>
+  </div>
+
+  <script>
+    const BASE = 0xBFFF0E00;
+    const SAVED_FP = [0x10, 0x01, 0xFF, 0xBF];
+    const SAVED_RET = [0x30, 0x12, 0x40, 0x00];
+    const CANARY = [0x52, 0x4F, 0x53, 0x45];
+    const REGION_META = {
+      buffer: { title: "local buffer", note: "where the copy is supposed to stop" },
+      canary: { title: "stack canary", note: "teaching guard that spells ROSE" },
+      fp: { title: "saved frame pointer", note: "made-up caller frame 0xBFFF0110" },
+      ret: { title: "return address", note: "made-up resume location 0x00401230" },
+      above: { title: "bytes above this frame", note: "the picture ends here" }
+    };
+
+    const nameInput = document.getElementById("name");
+    const preset = document.getElementById("preset");
+    const sizeInput = document.getElementById("size");
+    const sizeLabel = document.getElementById("size-label");
+    const progress = document.getElementById("progress");
+    const progressLabel = document.getElementById("progress-label");
+    const boundsInput = document.getElementById("bounds");
+    const canaryInput = document.getElementById("canary");
+    const stepBtn = document.getElementById("step");
+    const walkBtn = document.getElementById("walk");
+    const resetBtn = document.getElementById("reset");
+    const codeEl = document.getElementById("code");
+    const statusEl = document.getElementById("status");
+    const stackEl = document.getElementById("stack");
+    const storyEl = document.getElementById("story");
+    const detailEl = document.getElementById("detail");
+
+    let revealed = 0;
+    let timer = null;
+    let selected = null;
+
+    function clearDetail() {
+      selected = null;
+      detailEl.textContent = "Click a byte to read its address.";
+    }
+
+    function hex2(n) {
+      return n.toString(16).toUpperCase().padStart(2, "0");
+    }
+
+    function hex8(n) {
+      return "0x" + (n >>> 0).toString(16).toUpperCase().padStart(8, "0");
+    }
+
+    function readU32(bytes) {
+      return (bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24)) >>> 0;
+    }
+
+    function glyphFor(byte) {
+      if (byte === 0) return "NUL";
+      if (byte === 32) return "space";
+      if (byte >= 32 && byte <= 126) return String.fromCharCode(byte);
+      return "·";
+    }
+
+    function planWrites(text, bufferSize, boundsOn) {
+      const raw = Array.from(text).slice(0, 24);
+      const replaced = raw.some((ch) => ch.codePointAt(0) > 0x7f);
+      if (boundsOn && raw.length >= bufferSize) {
+        return { writes: [], refused: true, replaced };
+      }
+      const writes = raw.map((ch) => {
+        const code = ch.codePointAt(0);
+        const byte = code <= 0x7f ? code : 0x3f;
+        return { byte, source: code <= 0x7f ? ch : "?" };
+      });
+      writes.push({ byte: 0, source: "NUL" });
+      return { writes, refused: false, replaced };
+    }
+
+    function buildCells(bufferSize, canaryOn) {
+      const regions = [
+        { id: "buffer", bytes: Array.from({ length: bufferSize }, () => 0) },
+        ...(canaryOn ? [{ id: "canary", bytes: CANARY.slice() }] : []),
+        { id: "fp", bytes: SAVED_FP.slice() },
+        { id: "ret", bytes: SAVED_RET.slice() },
+        { id: "above", bytes: Array.from({ length: 16 }, () => 0) }
+      ];
+      const cells = [];
+      let address = BASE;
+      regions.forEach((region) => {
+        region.bytes.forEach((original, offset) => {
+          cells.push({
+            id: region.id,
+            offset,
+            address,
+            original,
+            value: original,
+            written: false
+          });
+          address += 1;
+        });
+      });
+      return cells;
+    }
+
+    function apply(cells, writes, count) {
+      const next = cells.map((cell) => ({ ...cell }));
+      const applied = writes.slice(0, count);
+      applied.forEach((write, index) => {
+        if (index >= next.length) return;
+        next[index].value = write.byte;
+        next[index].written = true;
+        next[index].source = write.source;
+      });
+      return { cells: next, overflowPastPicture: count > next.length };
+    }
+
+    function regionSlice(cells, id) {
+      return cells.filter((cell) => cell.id === id);
+    }
+
+    function changed(cells, id) {
+      return regionSlice(cells, id).some((cell) => cell.written && cell.value !== cell.original);
+    }
+
+    function currentModel() {
+      const bufferSize = Number(sizeInput.value);
+      const text = nameInput.value;
+      const boundsOn = boundsInput.checked;
+      const canaryOn = canaryInput.checked;
+      const planned = planWrites(text, bufferSize, boundsOn);
+      const base = buildCells(bufferSize, canaryOn);
+      const shown = Math.max(0, Math.min(revealed, planned.writes.length));
+      const applied = apply(base, planned.writes, shown);
+      return {
+        bufferSize,
+        text,
+        boundsOn,
+        canaryOn,
+        writes: planned.writes,
+        refused: planned.refused,
+        replaced: planned.replaced,
+        shown,
+        cells: applied.cells
+      };
+    }
+
+    function setRevealed(value, redraw) {
+      const modelPreview = planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked);
+      revealed = Math.max(0, Math.min(value, modelPreview.writes.length));
+      progress.max = String(modelPreview.writes.length);
+      progress.value = String(revealed);
+      if (redraw) render();
+    }
+
+    function stopWalk() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      walkBtn.textContent = "Walk the copy";
+    }
+
+    function render() {
+      const model = currentModel();
+      sizeLabel.textContent = model.bufferSize + " bytes";
+      const total = model.writes.length;
+      progress.max = String(total);
+      progress.value = String(model.shown);
+      progressLabel.textContent = total === 0
+        ? "nothing stored"
+        : model.shown === 0
+          ? "not started"
+          : "byte " + model.shown + " of " + total;
+
+      codeEl.textContent = model.boundsOn
+        ? "void greet(const char *name) {\n    char buf[" + model.bufferSize + "];\n    if (strlen(name) < sizeof buf)\n        strcpy(buf, name);\n}"
+        : "void greet(const char *name) {\n    char buf[" + model.bufferSize + "];\n    strcpy(buf, name);\n}";
+
+      const fpChanged = changed(model.cells, "fp");
+      const retChanged = changed(model.cells, "ret");
+      const canaryChanged = changed(model.cells, "canary");
+      const spilled = model.cells.some((cell) => cell.written && cell.id !== "buffer");
+      const onlyNulSpill = spilled && model.cells.filter((cell) => cell.written && cell.id !== "buffer").every((cell) => cell.value === 0) &&
+        model.cells.filter((cell) => cell.written && cell.id !== "buffer").length === 1;
+      const done = model.shown === total;
+
+      let statusClass = "ok";
+      let statusTitle = "The copy is still inside the buffer";
+      let statusBody = "Saved control data is unchanged.";
+      if (!done) {
+        statusClass = "warn";
+        statusTitle = "Walking the copy";
+        statusBody = model.shown + " of " + total + " bytes have been stored, counting the NUL.";
+      } else if (model.refused) {
+        statusClass = "ok";
+        statusTitle = "The length check skipped the copy";
+        statusBody = "The name plus a NUL would not fit, so strcpy did not run.";
+      } else if (onlyNulSpill) {
+        statusClass = "warn";
+        statusTitle = "Only the NUL spilled";
+        statusBody = "The letters fit. The extra terminating zero did not.";
+      } else if (retChanged) {
+        statusClass = "bad";
+        statusTitle = "The return address changed";
+        statusBody = "Those bytes no longer hold the made-up resume location.";
+      } else if (canaryChanged && fpChanged) {
+        statusClass = "warn";
+        statusTitle = "The canary and frame pointer changed";
+        statusBody = "ROSE is gone, and the saved frame pointer has new bytes. The return address is still intact.";
+      } else if (canaryChanged) {
+        statusClass = "warn";
+        statusTitle = "The canary changed";
+        statusBody = "The guard bytes no longer spell ROSE. The saved frame pointer is still intact.";
+      } else if (fpChanged) {
+        statusClass = "warn";
+        statusTitle = "The copy left the buffer";
+        statusBody = "The saved frame pointer changed. The return address is still intact.";
+      }
+      statusEl.className = "status " + statusClass;
+      statusEl.innerHTML = "<strong></strong><span></span>";
+      statusEl.querySelector("strong").textContent = statusTitle;
+      statusEl.querySelector("span").textContent = statusBody;
+
+      drawStack(model);
+      drawStory(model, { fpChanged, retChanged, canaryChanged, spilled, onlyNulSpill, done });
+      stepBtn.disabled = model.shown >= total;
+    }
+
+    function drawStack(model) {
+      stackEl.replaceChildren();
+      const order = ["above", "ret", "fp", "canary", "buffer"];
+      const beforeAbove = model.cells.filter((cell) => cell.id !== "above").length;
+      order.forEach((id) => {
+        const group = regionSlice(model.cells, id);
+        if (!group.length) return;
+        if (id === "above" && model.writes.length <= beforeAbove) return;
+        const region = document.createElement("section");
+        region.className = "region";
+        const title = document.createElement("div");
+        title.className = "region-title";
+        const name = document.createElement("span");
+        name.textContent = REGION_META[id].title;
+        const note = document.createElement("span");
+        note.textContent = regionNote(model, id, group);
+        title.append(name, note);
+        region.append(title);
+
+        const rows = document.createElement("div");
+        rows.className = "rows";
+        const chunks = [];
+        for (let i = 0; i < group.length; i += 4) chunks.push(group.slice(i, i + 4));
+        chunks.reverse().forEach((chunk) => {
+          const row = document.createElement("div");
+          row.className = "byte-row";
+          const addr = document.createElement("div");
+          addr.className = "addr";
+          addr.textContent = hex8(chunk[0].address);
+          const cells = document.createElement("div");
+          cells.className = "cells";
+          chunk.forEach((cell) => cells.append(cellButton(model, cell)));
+          for (let i = chunk.length; i < 4; i += 1) cells.append(document.createElement("div"));
+          row.append(addr, cells);
+          rows.append(row);
+        });
+        region.append(rows);
+        stackEl.append(region);
+      });
+    }
+
+    function regionNote(model, id, group) {
+      if (id === "ret") {
+        const bytes = group.map((cell) => cell.value);
+        const intact = bytes.every((byte, index) => byte === SAVED_RET[index]);
+        return intact ? "still 0x00401230" : "now reads " + hex8(readU32(bytes));
+      }
+      if (id === "fp") {
+        const bytes = group.map((cell) => cell.value);
+        const intact = bytes.every((byte, index) => byte === SAVED_FP[index]);
+        return intact ? "still 0xBFFF0110" : "now reads " + hex8(readU32(bytes));
+      }
+      if (id === "canary") {
+        const word = group.map((cell) => glyphFor(cell.value)).join("");
+        return word === "ROSE" ? "still ROSE" : "now " + word;
+      }
+      if (id === "buffer") {
+        const used = group.filter((cell) => cell.written).length;
+        return used + " / " + group.length + " written";
+      }
+      return REGION_META[id].note;
+    }
+
+    function cellButton(model, cell) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cell " + cell.id;
+      if (cell.written && cell.value !== cell.original) button.classList.add("changed");
+      if (!cell.written && cell.id !== "buffer") button.classList.add("quiet");
+      const writeIndex = model.cells.findIndex((item) => item.address === cell.address);
+      if (model.shown > 0 && writeIndex === model.shown - 1) button.classList.add("current");
+      if (selected === cell.address) button.classList.add("picked");
+      button.dataset.address = String(cell.address);
+      const hex = document.createElement("span");
+      hex.className = "hex";
+      hex.textContent = hex2(cell.value);
+      const glyph = document.createElement("span");
+      glyph.className = "glyph";
+      if (!cell.written && (cell.id === "buffer" || cell.id === "above")) {
+        glyph.textContent = "empty";
+      } else if (cell.value === 0) {
+        glyph.textContent = cell.written ? "NUL" : "zero";
+      } else {
+        glyph.textContent = glyphFor(cell.value);
+      }
+      button.append(hex, glyph);
+      button.addEventListener("click", () => showDetail(model, cell));
+      if (selected === cell.address) button.classList.add("current");
+      return button;
+    }
+
+    function showDetail(model, cell) {
+      selected = cell.address;
+      const where = cell.id === "buffer"
+        ? "buf[" + cell.offset + "]"
+        : REGION_META[cell.id].title;
+      const written = cell.written
+        ? " This byte was written by the copy."
+        : " The copy has not reached this byte.";
+      const shownGlyph = cell.value === 0 && !cell.written ? "zero" : glyphFor(cell.value);
+      detailEl.textContent = where + " at " + hex8(cell.address) + " holds " + hex2(cell.value) + " (" + shownGlyph + ")." + written;
+      render();
+    }
+
+    function drawStory(model, flags) {
+      storyEl.replaceChildren();
+      const bits = [];
+      bits.push("The stack in this picture grows toward lower addresses. strcpy does the opposite: it starts at buf[0] and writes one byte at a time toward higher addresses, then stores a NUL.");
+      if (model.refused) {
+        bits.push("strlen of this name is " + Array.from(model.text).length + ", and the buffer holds " + model.bufferSize + ". The check is strict less-than, because strcpy also writes a NUL. The condition fails, so the frame stays as the call left it.");
+      } else {
+        bits.push("This copy stores " + model.writes.length + " bytes for \"" + model.text + "\": the characters, plus the terminating NUL. The buffer holds " + model.bufferSize + ".");
+      }
+      if (model.replaced) {
+        bits.push("Characters outside ASCII are shown as question marks so each box stays one byte.");
+      }
+      if (!flags.done) {
+        bits.push("The highlight is the latest byte. Scrub copy progress or press Next byte to move one step.");
+      } else if (!model.refused && !flags.spilled) {
+        bits.push("Every stored byte landed inside the buffer. The saved frame pointer and the return address still hold their made-up values.");
+      } else if (flags.onlyNulSpill && !model.canaryOn) {
+        bits.push("The letters fit, and the NUL did not. That single extra zero is an off-by-one overflow. Counting only the visible characters misses it.");
+      } else if (flags.retChanged) {
+        const ret = regionSlice(model.cells, "ret").map((cell) => cell.value);
+        bits.push("The write reached the return address. Re-reading those four bytes in little-endian order gives " + hex8(readU32(ret)) + " instead of the made-up 0x00401230. A real function would use that saved value when it returns. This lesson stops at the corrupted bytes. It does not choose a destination.");
+      } else if (flags.canaryChanged && !flags.fpChanged) {
+        bits.push("The spill changed the canary and has not reached the saved frame pointer. A protected build would notice that ROSE is gone and stop before it trusted the return address.");
+      } else if (flags.canaryChanged && flags.fpChanged) {
+        bits.push("ROSE is gone, and the saved frame pointer has new bytes. The return address is still the made-up resume location, because the copy has not walked that far.");
+      } else if (flags.fpChanged) {
+        bits.push("The saved frame pointer has new bytes. The return address is still the made-up resume location, because the copy has not walked that far.");
+      }
+      if (model.canaryOn && flags.done && !flags.canaryChanged && flags.spilled === false) {
+        bits.push("The canary is still ROSE, which is what a stack protector checks before the function returns.");
+      }
+      bits.push("The four return-address bytes are stored least-significant byte first. Untouched, 0x00401230 sits in memory as 30 12 40 00. A 64-bit frame would use wider slots and extra padding. The neighbor relationship is the point of the picture.");
+      bits.forEach((text) => {
+        const p = document.createElement("p");
+        p.textContent = text;
+        storyEl.append(p);
+      });
+    }
+
+    nameInput.addEventListener("input", () => {
+      stopWalk();
+      if (preset.value !== nameInput.value) preset.value = nameInput.value;
+      const total = planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+      revealed = total;
+      clearDetail();
+      render();
+    });
+
+    preset.addEventListener("change", () => {
+      stopWalk();
+      nameInput.value = preset.value;
+      revealed = planWrites(preset.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+      clearDetail();
+      render();
+    });
+
+    sizeInput.addEventListener("input", () => {
+      stopWalk();
+      revealed = planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+      clearDetail();
+      render();
+    });
+
+    progress.addEventListener("input", () => {
+      stopWalk();
+      revealed = Number(progress.value);
+      render();
+    });
+
+    boundsInput.addEventListener("change", () => {
+      stopWalk();
+      revealed = planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+      clearDetail();
+      render();
+    });
+
+    canaryInput.addEventListener("change", () => {
+      stopWalk();
+      clearDetail();
+      render();
+    });
+
+    stepBtn.addEventListener("click", () => {
+      stopWalk();
+      setRevealed(revealed + 1, true);
+    });
+
+    walkBtn.addEventListener("click", () => {
+      if (timer) {
+        stopWalk();
+        return;
+      }
+      const total = planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+      if (total === 0) return;
+      if (revealed >= total) {
+        revealed = 0;
+        render();
+      }
+      walkBtn.textContent = "Pause";
+      timer = setInterval(() => {
+        revealed += 1;
+        render();
+        const done = revealed >= planWrites(nameInput.value, Number(sizeInput.value), boundsInput.checked).writes.length;
+        if (done) stopWalk();
+      }, 320);
+    });
+
+    resetBtn.addEventListener("click", () => {
+      stopWalk();
+      nameInput.value = "Rosebud!";
+      preset.value = "Rosebud!";
+      sizeInput.value = "8";
+      boundsInput.checked = false;
+      canaryInput.checked = false;
+      clearDetail();
+      revealed = planWrites("Rosebud!", 8, false).writes.length;
+      render();
+    });
+
+    revealed = planWrites("Rosebud!", 8, false).writes.length;
+    render();
+  </script>
+</body>
+</html>
