@@ -1,9 +1,20 @@
 # Reflection
 
-I built Rose Frame, a single browser page that shows a simplified stack frame while a copy writes into a small character buffer. I chose buffer overflow because the danger is spatial and easy to underestimate until the bytes actually move. The buffer, the saved frame pointer, and the return address are neighbors. A copy that never checks its length starts at the buffer and walks toward higher addresses.
+I had AI help me create this website, RoseFrame. It's single browser and as the project asked, visualizes stack frame during a string copy into a smaller character buffer. 
 
-The workflow was AI-assisted in Cursor. I started from the assignment constraints: a teaching visualization, real interaction, something that runs in a normal browser, and no exploit, shellcode, or attack tool. I also asked for a pink, feminine visual design. The assistant drafted one HTML file with the frame, the controls, and the narration. I then checked that picture against the class model. Writes begin at the low end of the buffer. The terminating NUL counts as its own byte. The saved frame pointer sits between the buffer and the return address, unless a canary is drawn in between. The addresses on the page are made up, so the lesson stays about layout.
+I started by establishing the core architectural constraints with AI:
+(The teaching part: Standardized input fields, presets, and safety toggles to demonstrate spatial memory behavior without weaponization
 
-That check is what deepened the idea for me. I already knew an overflow could overwrite a return address. The presets made the smaller cases concrete. "Rosebud" is seven letters and still leaves room for the NUL, so it fits in eight bytes. "Rosebud!" is only one character longer, and the NUL is the byte that leaves the buffer. That off-by-one is easy to miss if you only count letters. A longer greeting continues into the saved frame pointer and then the return address. The length-check toggle stops the copy inside the buffer, including the NUL. The canary toggle places guard bytes between the buffer and the control data. If those bytes change, a protected build would halt before it trusted the return address. The page does not show how to bypass that guard.
+Browser execution: Self-contained single-file (`index.html`) running HTML, CSS, and vanilla JavaScript without any external backend dependence
 
-The AI was fastest for the layout, the step animation, and the styling. The part I had to own was whether the story matched the mechanism: the direction of the write, the extra NUL, the little-endian display of the saved address, and wording that explains the risk without turning the page into an attack tool. I tested a short input, an exact fit, the off-by-one case, a longer spill, the bounds-check toggle, and the canary toggle in the browser. The result is a page I can open locally and use to explain the frame to someone else.
+Visual identity: Pretty and able to make abstract call stack concepts visually accessible
+
+
+AI created the initial HTML layout, state machine, and CSS and my part was testing. Technical auditing and domain validation like making sure memory writes move toward higher memory addresses, tracking implicit null-terminators, and enforcing little-endian address representations)
+
+this clarified cases in memory layout and mitigations:
+Spatial Proximity: Visualizing the stack contiguous layout highlights why unmanaged writes are hazardous
+off-by-one boundary:The `"Rosebud!"` preset (w 8 characters) shows off-by-one errors. While 8 printable characters match an 8-byte buffer, the required null terminator byte overflows into the adjacent stack
+Defensive Controls: Implementing interactive toggles for bounds-checking  and stack canaries showed how modern compilers protect control flow before a corrupted return address is executed
+
+By auditing the AI-generated code against class models, testing edge cases across presets, and iteratively refining the step animation, we created tool for demonstrating stack vulnerabilities
